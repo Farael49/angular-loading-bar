@@ -97,7 +97,7 @@ angular.module('cfp.loadingBarInterceptor', ['cfp.loadingBar'])
             $rootScope.$broadcast('cfpLoadingBar:loading', {url: config.url});
             if (reqsTotal === 0) {
               startTimeout = $timeout(function() {
-                cfpLoadingBar.start();
+                cfpLoadingBar.start((config.method !== undefined && config.method !== 'GET'));
               }, latencyThreshold);
             }
             reqsTotal++;
@@ -163,10 +163,12 @@ angular.module('cfp.loadingBar', [])
     this.autoIncrement = true;
     this.includeSpinner = true;
     this.includeBar = true;
-    this.latencyThreshold = 100;
+    this.latencyThreshold = 50;
     this.startSize = 0.02;
     this.parentSelector = 'body';
     this.spinnerTemplate = '<div id="loading-bar-spinner"><div class="spinner-icon"></div></div>';
+    this.blockSpinnerTemplate = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;opacity:0.4;alpha(opacity=40);background-color:#000000; z-index:10000;"></div>'+
+                                '<div style="position:absolute;top:0;left:0;right:0;bottom:0;margin:auto;width:80px;height:80px;font-size:80px;color:#ffffff;z-index:10001;" class="fa fa-clock-o"></div>';
     this.loadingBarTemplate = '<div id="loading-bar"><div class="bar"><div class="peg"></div></div></div>';
 
     this.$get = ['$injector', '$document', '$timeout', '$rootScope', function ($injector, $document, $timeout, $rootScope) {
@@ -174,7 +176,8 @@ angular.module('cfp.loadingBar', [])
       var $parentSelector = this.parentSelector,
         loadingBarContainer = angular.element(this.loadingBarTemplate),
         loadingBar = loadingBarContainer.find('div').eq(0),
-        spinner = angular.element(this.spinnerTemplate);
+        spinner = angular.element(this.spinnerTemplate),
+        blockSpinner = angular.element(this.blockSpinnerTemplate);
 
       var incTimeout,
         completeTimeout,
@@ -189,7 +192,7 @@ angular.module('cfp.loadingBar', [])
       /**
        * Inserts the loading bar element into the dom, and sets it to 2%
        */
-      function _start() {
+      function _start(block) {
         if (!$animate) {
           $animate = $injector.get('$animate');
         }
@@ -209,8 +212,10 @@ angular.module('cfp.loadingBar', [])
           $animate.enter(loadingBarContainer, $parent, angular.element($parent[0].lastChild));
         }
 
-        if (includeSpinner) {
+        if (includeSpinner && block === undefined) {
           $animate.enter(spinner, $parent, angular.element($parent[0].lastChild));
+        } else if (includeSpinner && block) {
+            $animate.enter(blockSpinner, $parent, angular.element($parent[0].lastChild));
         }
 
         _set(startSize);
@@ -295,13 +300,14 @@ angular.module('cfp.loadingBar', [])
         $timeout.cancel(completeTimeout);
 
         // Attempt to aggregate any start/complete calls within 500ms:
-        completeTimeout = $timeout(function() {
+        //completeTimeout = $timeout(function() {
           var promise = $animate.leave(loadingBarContainer, _completeAnimation);
           if (promise && promise.then) {
             promise.then(_completeAnimation);
           }
           $animate.leave(spinner);
-        }, 500);
+          $animate.leave(blockSpinner);
+        //}, 500);
       }
 
       return {
