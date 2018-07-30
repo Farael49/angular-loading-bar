@@ -89,7 +89,7 @@
   right: 0;
   bottom: 0;
   opacity: 0.4;
-  alpha(opacity=40);
+  filter: alpha(opacity=40);
   background-color: #000000;
   z-index: 10000;
 }
